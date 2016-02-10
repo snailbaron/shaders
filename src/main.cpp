@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -51,91 +52,51 @@ const char * ShaderTypeToString(GLenum shaderType)
     }
 }
 
-GLuint LoadShader(const char *fileName, GLenum shaderType)
-{
-    std::cout << "Compiling shader (" << ShaderTypeToString(shaderType) << "): " << fileName << std::endl;
-
-    // Load shader source code
-    std::ifstream ifs(fileName);
-    if (!ifs.is_open()) {
-        THROW(Error, std::string("Failed to open shader file: ") + std::string(fileName));
-    }
-    std::string source((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-    std::cout << "Loaded shader source" << std::endl;
-
-    // Create shader object
-    GLuint shader = glCreateShader(shaderType);
-    if (shader == 0) {
-        THROW(Error, "Failed to create shader");
-    }
-    std::cout << "Created shader object" << std::endl;
-
-    // Compile source code
-    const GLchar *sourcePtr = source.c_str();
-    GLint sourceLen = static_cast<GLint>(source.length());
-    glShaderSource(shader, 1, &sourcePtr, &sourceLen);
-    glCompileShader(shader);
-    std::cout << "Compiled shader" << std::endl;
-
-    // Check compilation status
-    GLint compileStatus;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
-    std::cout << "Compilation status: " << (compileStatus ? "OK" : "FAIL") << std::endl;
-
-    // Get compilation log
-    GLint logLen;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
-    if (logLen > 0) {
-        std::vector<GLchar> log(logLen);
-        GLsizei writtenLen;
-        glGetShaderInfoLog(shader, logLen, &writtenLen, &log[0]);
-        std::cout << "Compilation log:" << std::endl << &log[0] << std::endl;
-    } else {
-        std::cout << "Compilation log is empty" << std::endl;
-    }
-
-    return shader;
-}
-
-GLuint LoadProgram(const std::vector<GLuint> &shaders)
-{
-    GLuint program = glCreateProgram();
-    if (program == 0) {
-        THROW(Error, "Failed to create program");
-    }
-    std::cout << "Created program" << std::endl;
-
-    for (size_t i = 0; i < shaders.size(); i++) {
-        glAttachShader(program, shaders[i]);
-    }
-    std::cout << "Attached " << shaders.size() << " shaders" << std::endl;
-
-    glLinkProgram(program);
-    GLint linkStatus;
-    glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-    std::cout << "Link status: " << (linkStatus ? "OK" : "FAIL") << std::endl;
-
-    GLint logLen;
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
-    if (logLen > 0) {
-        std::vector<GLchar> log(logLen);
-        GLsizei writtenLen;
-        glGetProgramInfoLog(program, logLen, &writtenLen, &log[0]);
-        std::cout << "Link log:" << std::endl << &log[0] << std::endl;
-    } else {
-        std::cout << "Link log is empty" << std::endl;
-    }
-
-    glUseProgram(program);
-
-    return program;
-}
-
 void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *param)
 {
-    std::cout << "Debug message received!" << std::endl;
+    std::cout << "[DEBUG] " << message << std::endl;
 }
 
+static glm::vec3 g_movement(0.0f);
+
+void OnKeyPress(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    // Ignore key repeats
+    if (action == GLFW_REPEAT) {
+        return;
+    }
+
+    std::map<int, glm::vec3> moveVectors;
+    moveVectors[GLFW_KEY_W] = glm::vec3(0.0f, 0.0f, -1.0f);
+    moveVectors[GLFW_KEY_S] = glm::vec3(0.0f, 0.0f, 1.0f);
+    moveVectors[GLFW_KEY_A] = glm::vec3(-1.0f, 0.0f, 0.0f);
+    moveVectors[GLFW_KEY_D] = glm::vec3(1.0f, 0.0f, 0.0f);
+    moveVectors[GLFW_KEY_SPACE] = glm::vec3(0.0f, 1.0f, 0.0f);
+    moveVectors[GLFW_KEY_C] = glm::vec3(0.0f, -1.0f, 0.0f);
+
+    std::map<int, glm::vec3>::iterator it = moveVectors.find(key);
+    if (it != moveVectors.end()) {
+        float direction = (action == GLFW_PRESS ? -1.0f : 1.0f);
+
+        std::cout << "Moving!" << std::endl;
+        g_movement += it->second * direction;
+    }
+}
+
+static glm::mat4 g_rotation(1.0f);
+
+void OnMouseMove(GLFWwindow *window, double xpos, double ypos)
+{
+    static double xx = xpos, yy = ypos;
+    
+    glm::vec2 moveVec(xpos - xx, ypos - yy);
+    xx = xpos;
+    yy = ypos;
+    moveVec *= 0.005f;
+
+    glm::mat4 rot = glm::eulerAngleXY(moveVec.y, moveVec.x);
+    g_rotation = g_rotation * rot;
+}
 
 int main()
 {
@@ -153,6 +114,13 @@ int main()
         return 1;
     }
     glfwMakeContextCurrent(window);
+    int windowWidth, windowHeight;
+    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+    float aspectRatio = (float)windowWidth / windowHeight;
+
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, 0);
+    glfwSetKeyCallback(window, OnKeyPress);
+    glfwSetCursorPosCallback(window, OnMouseMove);
 
     glewExperimental = true;
     if (glewInit() != GLEW_OK) {
@@ -163,77 +131,251 @@ int main()
     glDebugMessageCallback(DebugCallback, nullptr);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
+    glEnable(GL_DEPTH_TEST);
+
     GLSLProgram program;
-    program.CompileShader("../src/basic.vert");
-    program.CompileShader("../src/basic.frag");
+    program.CompileShader("../src/diffuse.vert");
+    program.CompileShader("../src/diffuse.frag");
+
+    program.BindAttribLocation(0, "VertexPosition");
+    program.BindAttribLocation(1, "VertexNormal");
+    program.BindAttribLocation(2, "VertexColor");
+
     program.Link();
     program.Use();
 
-    //GLuint vertShader = LoadShader("../src/basic.vert", GL_VERTEX_SHADER);
-    //GLuint fragShader = LoadShader("../src/basic.frag", GL_FRAGMENT_SHADER);
-    //std::vector<GLuint> shaders = { vertShader, fragShader };
-    //GLuint program = LoadProgram(shaders);
-
-    
     GLuint vertexBuffer;
     glGenBuffers(1, &vertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
     GLfloat vertexData[] = {
-        -0.7f, -0.8f, 0.0f,
-        0.7f, -0.8f, 0.0f,
-        0.0f, 0.8f, 0.0f
+        // -X side
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+
+        // +X side        
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+
+        // -Y side
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+
+        1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+
+        // +Y side
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+
+        // -Z side
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+
+        // +Z side
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+
+        1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
 
+    GLfloat normalData[] = {
+        // -X normal
+        -1.0f, 0.0f, 0.0f,
+        -1.0f, 0.0f, 0.0f,
+        -1.0f, 0.0f, 0.0f,
+        -1.0f, 0.0f, 0.0f,
+        -1.0f, 0.0f, 0.0f,
+        -1.0f, 0.0f, 0.0f,
+
+        // +X normal
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+
+        // -Y normal
+        0.0f, -1.0f, 0.0f,
+        0.0f, -1.0f, 0.0f,
+        0.0f, -1.0f, 0.0f,
+        0.0f, -1.0f, 0.0f,
+        0.0f, -1.0f, 0.0f,
+        0.0f, -1.0f, 0.0f,
+
+        // +Y normal
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+
+        // -Z normal
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+
+        // +Z normal
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+    };
+    GLuint normalBuffer;
+    glGenBuffers(1, &normalBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(normalData), normalData, GL_STATIC_DRAW);
+
+    GLfloat colorData[] = {
+        // -X
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+
+        // +X
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+
+        1.0f, 1.0f, 0.0f,
+        1.0f, 1.0f, 0.0f,
+        1.0f, 1.0f, 0.0f,
+
+        // -Y
+        1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 1.0f,
+
+        0.0f, 1.0f, 1.0f,
+        0.0f, 1.0f, 1.0f,
+        0.0f, 1.0f, 1.0f,
+
+        // +Y
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+
+        0.5f, 0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
+        0.5f, 0.5f, 0.0f,
+
+        // -Z
+        0.5f, 0.0f, 0.5f,
+        0.5f, 0.0f, 0.5f,
+        0.5f, 0.0f, 0.5f,
+
+        0.0f, 0.5f, 0.5f,
+        0.0f, 0.5f, 0.5f,
+        0.0f, 0.5f, 0.5f,
+
+        // +Z
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+
+        0.5f, 0.0f, 0.0f,
+        0.5f, 0.0f, 0.0f,
+        0.5f, 0.0f, 0.0f,
+    };
     GLuint colorBuffer;
     glGenBuffers(1, &colorBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    GLfloat colorData[] = {
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f
-    };
     glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
-
-    GLint vertexColorLoc = glGetAttribLocation(program.Handle(), "VertexColor");
-    GLint vertexPosLoc = glGetAttribLocation(program.Handle(), "VertexPosition");
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    glEnableVertexAttribArray(vertexColorLoc);
-    glEnableVertexAttribArray(vertexPosLoc);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
 
-    //glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    //glVertexAttribPointer(vertexPosLoc, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
     glBindVertexBuffer(0, vertexBuffer, 0, sizeof(GLfloat) * 3);
+    glBindVertexBuffer(1, normalBuffer, 0, sizeof(GLfloat) * 3);
+    glBindVertexBuffer(2, colorBuffer, 0, sizeof(GLfloat) * 3);
 
-    //glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    //glVertexAttribPointer(vertexColorLoc, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-    glBindVertexBuffer(1, colorBuffer, 0, sizeof(GLfloat) * 3);
+    glVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexAttribFormat(2, 3, GL_FLOAT, GL_FALSE, 0);
 
-    glVertexAttribFormat(vertexPosLoc, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexAttribBinding(vertexPosLoc, 0);
-    glVertexAttribFormat(vertexColorLoc, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexAttribBinding(vertexColorLoc, 1);
+    glVertexAttribBinding(0, 0);
+    glVertexAttribBinding(1, 1);
+    glVertexAttribBinding(2, 2);
 
-    
+    program.PrintActiveAttribs();
 
-    GLfloat angle = 0.0f;
+    glm::mat4 projectionMatrix = glm::perspective(45.0f, aspectRatio, 0.01f, 100.0f);
+    glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+
+    glm::vec3 lightPosition(10.0f, 10.0f, 2.0f);
+    glm::vec3 lightIntensityRGB(1.0f, 0.5f, 1.0f);
+    glm::vec3 reflectionRGB(0.8f, 1.0f, 0.7f);
+
     while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        angle += 0.01f;
-        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f));
-        GLuint location = glGetUniformLocation(program.Handle(), "RotationMatrix");
-        if (location >= 0) {
-            glUniformMatrix4fv(location, 1, GL_FALSE, &rotationMatrix[0][0]);
-        }
+        glm::vec3 velocity(0.0f);
+        if (glm::length(g_movement) > 0.0f) {
+            velocity = glm::normalize(g_movement) * 0.1f;
+        }          
+
+        //viewMatrix = glm::translate(viewMatrix, velocity);
+        viewMatrix = glm::translate(glm::mat4(1.0f), velocity) * viewMatrix;
+
+        viewMatrix = g_rotation * viewMatrix;
+        g_rotation = glm::mat4(1.0f);
+
+        glm::mat4 modelViewMatrix = viewMatrix;
+        glm::mat3 normalMatrix = glm::inverse(glm::transpose(glm::mat3(modelViewMatrix)));
+        
+        program.SetUniform("ModelViewMatrix", modelViewMatrix);
+        program.SetUniform("ProjectionMatrix", projectionMatrix);
+        program.SetUniform("LightPosition", lightPosition);
+        program.SetUniform("NormalMatrix", normalMatrix);
+        program.SetUniform("Ld", lightIntensityRGB);
+        program.SetUniform("Kd", reflectionRGB);
 
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

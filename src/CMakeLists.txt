@@ -47,11 +47,13 @@ set(SOURCES
     main.cpp
     error.hpp
     errors.hpp
-    basic.vert
-    basic.frag
     glsl_exception.hpp
     glsl_program.hpp
     glsl_program.cpp
+    basic.vert
+    basic.frag
+    diffuse.vert
+    diffuse.frag
 )
 add_executable(shaders ${SOURCES})
 target_include_directories(shaders SYSTEM PRIVATE "${OPENGL_INCLUDE_DIR}" "${GLEW_INCLUDE_DIR}" "${GLFW_INCLUDE_DIR}" "${GLM_DIR}" "${BOOST_DIR}")

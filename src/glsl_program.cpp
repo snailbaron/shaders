@@ -214,7 +214,7 @@ void GLSLProgram::CompileShader(const std::string &source, GLSLShaderType type, 
         std::vector<char> log(logLen);
         glGetShaderInfoLog(shader, logLen, nullptr, &log[0]);
         std::ostringstream msg;
-        msg << "Shader compilation failed:" << std::endl << &log[0] << std::endl;
+        msg << "Shader (" << fileName << ") compilation failed:" << std::endl << &log[0] << std::endl;
         throw GLSLException(msg.str());
     }
 
@@ -256,9 +256,6 @@ GLuint GLSLProgram::_GetUniformLocation(const char *name)
     std::map<std::string, int>::iterator it = m_uniformLocations.find(name);
     if (it == m_uniformLocations.end()) {
         GLint location = glGetUniformLocation(m_handle, name);
-        if (location == 0) {
-            throw GLSLException(std::string("Uniform not found: ") + name);
-        }
         m_uniformLocations[name] = location;
     }
 
@@ -274,13 +271,13 @@ void GLSLProgram::SetUniform(const char *name, float x, float y, float z)
 void GLSLProgram::SetUniform(const char *name, const glm::vec3 &v)
 {
     GLuint location = _GetUniformLocation(name);
-    glUniform3fv(location, 3, &v[0]);
+    glUniform3fv(location, 1, &v[0]);
 }
 
 void GLSLProgram::SetUniform(const char *name, const glm::vec4 &v)
 {
     GLuint location = _GetUniformLocation(name);
-    glUniform4fv(location, 4, &v[0]);
+    glUniform4fv(location, 1, &v[0]);
 }
     
 void GLSLProgram::SetUniform(const char *name, const glm::mat3 &m)
