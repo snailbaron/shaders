@@ -54,6 +54,8 @@ set(SOURCES
     basic.frag
     diffuse.vert
     diffuse.frag
+    ads.vert
+    ads.frag
 )
 add_executable(shaders ${SOURCES})
 target_include_directories(shaders SYSTEM PRIVATE "${OPENGL_INCLUDE_DIR}" "${GLEW_INCLUDE_DIR}" "${GLFW_INCLUDE_DIR}" "${GLM_DIR}" "${BOOST_DIR}")

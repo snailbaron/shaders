@@ -77,8 +77,6 @@ void OnKeyPress(GLFWwindow *window, int key, int scancode, int action, int mods)
     std::map<int, glm::vec3>::iterator it = moveVectors.find(key);
     if (it != moveVectors.end()) {
         float direction = (action == GLFW_PRESS ? -1.0f : 1.0f);
-
-        std::cout << "Moving!" << std::endl;
         g_movement += it->second * direction;
     }
 }
@@ -134,190 +132,79 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     GLSLProgram program;
-    program.CompileShader("../src/diffuse.vert");
-    program.CompileShader("../src/diffuse.frag");
+    program.CompileShader("../src/ads.vert");
+    program.CompileShader("../src/ads.frag");
 
     program.BindAttribLocation(0, "VertexPosition");
     program.BindAttribLocation(1, "VertexNormal");
-    program.BindAttribLocation(2, "VertexColor");
 
     program.Link();
     program.Use();
 
+    // Vertex data: coordinates, normals
+    const size_t VERTEX_NUM = 36;
+    GLfloat vertexData[VERTEX_NUM * 6] = {
+        // <position>           <normal>
+
+        // -X side
+        -1.0f, -1.0f, -1.0f,    -1.0f, 0.0f, 0.0f,
+        -1.0f,  1.0f,  1.0f,    -1.0f, 0.0f, 0.0f,
+        -1.0f, -1.0f,  1.0f,    -1.0f, 0.0f, 0.0f,
+
+        -1.0f,  1.0f,  1.0f,    -1.0f, 0.0f, 0.0f,
+        -1.0f,  1.0f, -1.0f,    -1.0f, 0.0f, 0.0f,
+        -1.0f, -1.0f, -1.0f,    -1.0f, 0.0f, 0.0f,
+
+        // +X side        
+         1.0f, -1.0f, -1.0f,     1.0f, 0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f,     1.0f, 0.0f, 0.0f,
+         1.0f,  1.0f,  1.0f,     1.0f, 0.0f, 0.0f,
+
+         1.0f,  1.0f,  1.0f,     1.0f, 0.0f, 0.0f,
+         1.0f,  1.0f, -1.0f,     1.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, -1.0f,     1.0f, 0.0f, 0.0f,
+
+        // -Y side
+        -1.0f, -1.0f, -1.0f,     0.0f, -1.0f, 0.0f,
+        -1.0f, -1.0f,  1.0f,     0.0f, -1.0f, 0.0f,
+         1.0f, -1.0f,  1.0f,     0.0f, -1.0f, 0.0f,
+
+         1.0f, -1.0f,  1.0f,     0.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, -1.0f,     0.0f, -1.0f, 0.0f,
+        -1.0f, -1.0f, -1.0f,     0.0f, -1.0f, 0.0f,
+
+        // +Y side
+        -1.0f,  1.0f, -1.0f,     0.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  1.0f,     0.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f,     0.0f,  1.0f, 0.0f,
+
+         1.0f,  1.0f,  1.0f,     0.0f,  1.0f, 0.0f,
+         1.0f,  1.0f, -1.0f,     0.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f, -1.0f,     0.0f,  1.0f, 0.0f,
+
+        // -Z side
+        -1.0f, -1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+
+         1.0f,  1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,     0.0f,  0.0f, -1.0f,
+
+        // +Z side
+        -1.0f, -1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+
+         1.0f,  1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,     0.0f,  0.0f,  1.0f,
+    };
+
     GLuint vertexBuffer;
     glGenBuffers(1, &vertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-
-    GLfloat vertexData[] = {
-        // -X side
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-
-        // +X side        
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-
-        // -Y side
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-
-        1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-
-        // +Y side
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-
-        // -Z side
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        1.0f, 1.0f, -1.0f,
-
-        1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-
-        // +Z side
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-
-        1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-    };
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
-    GLfloat normalData[] = {
-        // -X normal
-        -1.0f, 0.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f,
-        -1.0f, 0.0f, 0.0f,
-
-        // +X normal
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-
-        // -Y normal
-        0.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 0.0f,
-
-        // +Y normal
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-
-        // -Z normal
-        0.0f, 0.0f, -1.0f,
-        0.0f, 0.0f, -1.0f,
-        0.0f, 0.0f, -1.0f,
-        0.0f, 0.0f, -1.0f,
-        0.0f, 0.0f, -1.0f,
-        0.0f, 0.0f, -1.0f,
-
-        // +Z normal
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-    };
-    GLuint normalBuffer;
-    glGenBuffers(1, &normalBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(normalData), normalData, GL_STATIC_DRAW);
-
-    GLfloat colorData[] = {
-        // -X
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-
-        // +X
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-
-        // -Y
-        1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f,
-
-        0.0f, 1.0f, 1.0f,
-        0.0f, 1.0f, 1.0f,
-        0.0f, 1.0f, 1.0f,
-
-        // +Y
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-
-        0.5f, 0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
-        0.5f, 0.5f, 0.0f,
-
-        // -Z
-        0.5f, 0.0f, 0.5f,
-        0.5f, 0.0f, 0.5f,
-        0.5f, 0.0f, 0.5f,
-
-        0.0f, 0.5f, 0.5f,
-        0.0f, 0.5f, 0.5f,
-        0.0f, 0.5f, 0.5f,
-
-        // +Z
-        0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f,
-
-        0.5f, 0.0f, 0.0f,
-        0.5f, 0.0f, 0.0f,
-        0.5f, 0.0f, 0.0f,
-    };
-    GLuint colorBuffer;
-    glGenBuffers(1, &colorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -325,19 +212,15 @@ int main()
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
 
-    glBindVertexBuffer(0, vertexBuffer, 0, sizeof(GLfloat) * 3);
-    glBindVertexBuffer(1, normalBuffer, 0, sizeof(GLfloat) * 3);
-    glBindVertexBuffer(2, colorBuffer, 0, sizeof(GLfloat) * 3);
+    glBindVertexBuffer(0, vertexBuffer, 0, sizeof(GLfloat) * 6);
+    glBindVertexBuffer(1, vertexBuffer, sizeof(GLfloat) * 3, sizeof(GLfloat) * 6);
 
     glVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, 0);
     glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexAttribFormat(2, 3, GL_FLOAT, GL_FALSE, 0);
 
     glVertexAttribBinding(0, 0);
     glVertexAttribBinding(1, 1);
-    glVertexAttribBinding(2, 2);
 
     program.PrintActiveAttribs();
 
@@ -345,9 +228,26 @@ int main()
     glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 
-    glm::vec3 lightPosition(10.0f, 10.0f, 2.0f);
-    glm::vec3 lightIntensityRGB(1.0f, 0.5f, 1.0f);
-    glm::vec3 reflectionRGB(0.8f, 1.0f, 0.7f);
+    // Light properties
+    glm::vec3 lightPosition(10.0f, 5.0f, 2.0f);
+    glm::vec3 lightLa(0.1f, 0.2f, 0.1f);
+    glm::vec3 lightLd(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightLs(0.5f, 0.5f, 0.5f);
+
+    // Material properties
+    glm::vec3 materialKa(1.0f, 0.7f, 0.7f);
+    glm::vec3 materialKd(1.0f, 0.7f, 0.7f);
+    glm::vec3 materialKs(1.0f, 0.7f, 0.7f);
+    GLfloat materialShine = 8.0f;    
+
+    program.SetUniform("Light.Position", lightPosition);
+    program.SetUniform("Light.La", lightLa);
+    program.SetUniform("Light.Ld", lightLd);
+    program.SetUniform("Light.Ls", lightLs);
+    program.SetUniform("Material.Ka", materialKa);
+    program.SetUniform("Material.Kd", materialKd);
+    program.SetUniform("Material.Ks", materialKs);
+    program.SetUniform("Material.Shine", materialShine);
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -369,13 +269,11 @@ int main()
         
         program.SetUniform("ModelViewMatrix", modelViewMatrix);
         program.SetUniform("ProjectionMatrix", projectionMatrix);
-        program.SetUniform("LightPosition", lightPosition);
         program.SetUniform("NormalMatrix", normalMatrix);
-        program.SetUniform("Ld", lightIntensityRGB);
-        program.SetUniform("Kd", reflectionRGB);
 
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
         glfwSwapBuffers(window);
         glfwPollEvents();
